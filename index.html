@@ -31,6 +31,10 @@
 </svg>
 
 <main id="app">
+  <div class="alert" id="save-error" hidden role="alert">
+    <p>Nie udało się zapisać postępu na telefonie.</p>
+    <button class="btn-ghost btn-small" id="btn-retry-save">Spróbuj zapisać ponownie</button>
+  </div>
   <!-- HOME -->
   <section id="home" class="screen" aria-labelledby="h-title">
     <header class="topbar">
@@ -41,15 +45,11 @@
       <button class="icon-btn" id="btn-settings" aria-label="Ustawienia"><svg class="ic"><use href="#i-settings"/></svg></button>
     </header>
 
-    <div class="alert" id="save-error" hidden role="alert">
-      <p>Nie udało się zapisać postępu na telefonie.</p>
-      <button class="btn-ghost btn-small" id="btn-retry-save">Spróbuj zapisać ponownie</button>
-    </div>
     <div class="alert" id="load-error" hidden role="alert">
       <p>Nie wczytała się lista słów. Otwórz apkę z internetem, żeby ją pobrać.</p>
     </div>
     <div class="alert alert-info" id="install-hint" hidden>
-      <p>Dodaj apkę do ekranu głównego (Udostępnij, potem „Do ekranu początkowego”) i ucz się z ikony. Postęp w Safari i w apce na ekranie głównym jest zapisany osobno.</p>
+      <p>Dodaj apkę do ekranu głównego (Udostępnij, potem „Do ekranu początkowego”) i ucz się z ikony. Potem otwórz ją raz z internetem, żeby pobrała się do trybu offline. Postęp w Safari i w apce na ekranie głównym jest zapisany osobno.</p>
     </div>
 
     <div class="card progress-card">
@@ -98,6 +98,7 @@
         <button class="icon-btn speak" id="btn-speak" aria-label="Wymowa"><svg class="ic"><use href="#i-speaker"/></svg></button>
       </div>
       <p class="tag" id="q-tag"></p>
+      <p class="tag" id="speak-error" hidden role="status">Nie udało się odtworzyć wymowy. Sprawdź głos w Ustawieniach.</p>
     </div>
 
     <div class="options" id="options" role="group" aria-label="Odpowiedzi"></div>

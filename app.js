@@ -32,33 +32,50 @@
   function load() {
     let s;
     try { s = JSON.parse(localStorage.getItem(KEY)); } catch (e) { s = null; }
+    return normalize(s) || fresh();
+  }
+  // Returns a clean state object, or null when the input is not a usable save.
+  function normalize(s, strict = false) {
     const def = fresh();
-    if (!s || typeof s !== 'object') return def;
+    if (!s || typeof s !== 'object' || Array.isArray(s)) return null;
+    if (strict && (typeof s.cards !== 'object' || (s.settings != null && typeof s.settings !== 'object'))) return null;
+    if (s.cards && (typeof s.cards !== 'object' || Array.isArray(s.cards))) return null;
     s.settings = Object.assign(def.settings, s.settings || {});
     s.cards = s.cards || {};
     s.streak = s.streak || def.streak;
     s.today = s.today || def.today;
-    for (const c of Object.values(s.cards)) { // v1 stored timestamps; v2 stores day keys
-      if (!c.d) c.d = typeof c.due === 'number' ? keyOf(new Date(c.due)) : dayKey();
+    for (const [id, c] of Object.entries(s.cards)) {
+      if (!c || typeof c !== 'object' || !(c.b >= 1 && c.b <= MASTER_BOX)) { if (strict) return null; delete s.cards[id]; continue; }
+      // v1 stored timestamps; v2 stores day keys
+      if (!c.d) c.d = typeof c.due === 'number' ? keyOf(new Date(c.due + 12 * 3600000)) : dayKey(); // +12h absorbs DST drift
       delete c.due;
     }
     s.v = 2;
     return s;
   }
   let S = load();
+  let unsaved = false;
   function save() {
     try {
       localStorage.setItem(KEY, JSON.stringify(S));
+      unsaved = false;
       $('save-error').hidden = true;
+      applyPendingUpdate();
       return true;
     } catch (e) {
+      unsaved = true;
       $('save-error').hidden = false;
       return false;
     }
   }
   if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {});
   // Another tab changed progress: adopt it instead of overwriting it later.
-  window.addEventListener('storage', e => { if (e.key === KEY && !Q) { S = load(); renderHome(); } });
+  window.addEventListener('storage', e => {
+    if (e.key !== KEY) return;
+    S = load(); // session queue only holds ids, so adopting the newer state mid-quiz is safe
+    if (!$('home').hidden) renderHome();
+    if (!$('settings').hidden) renderSettings();
+  });
 
   /* ---------- stats ---------- */
   function stats() {
@@ -92,7 +109,7 @@
     en.toLowerCase().replace(/\(.*?\)/g, '').split('/').map(s => s.replace(/[!?.…"]/g, '').trim()).filter(Boolean)
   );
   const sameMeaning = (a, b) => {
-    if (a.g && a.g === b.g) return true; // curated synonym group
+    if (a.g && b.g && a.g.some(g => b.g.includes(g))) return true; // curated synonym groups
     const ka = keysOf(a.e);
     for (const k of keysOf(b.e)) if (ka.has(k)) return true;
     return false;
@@ -149,6 +166,8 @@
       u.lang = 'pt-PT';
       if (voice) u.voice = voice;
       u.rate = 0.9;
+      $('speak-error').hidden = true;
+      u.onerror = ev => { if (ev.error !== 'interrupted' && ev.error !== 'canceled') $('speak-error').hidden = false; };
       speechSynthesis.speak(u);
     } catch (e) { /* speech unavailable */ }
   }
@@ -354,7 +373,7 @@
 
     const known = !!S.cards[w.i];
     const c = S.cards[w.i] || { b: 1, d: today, r: 0, w: 0 };
-    const lapsedToday = c.lapse === today; // persists through quitting and restarting the session
+    const lapsedToday = c.lapse === today || Q.missed.has(w.i); // survives a restart today and a retry after midnight
     if (correct) {
       c.r++;
       if (lapsedToday) { c.b = 1; c.d = addDays(today, INTERVAL[1]); }
@@ -422,10 +441,12 @@
   });
   $('btn-import').addEventListener('click', () => {
     try {
-      const s = JSON.parse($('backup-text').value);
-      if (!s || typeof s.cards !== 'object') throw new Error('bad');
-      localStorage.setItem(KEY, JSON.stringify(s));
-      S = load(); save();
+      const s = normalize(JSON.parse($('backup-text').value), true);
+      if (!s || !Object.keys(s.cards).length) throw new Error('bad');
+      const prev = S;
+      S = s;
+      if (!save()) { S = prev; throw new Error('save'); }
+      renderSettings();
       $('backup-info').textContent = `Wczytano postęp: ${Object.keys(S.cards).length} słów.`;
     } catch (e) { $('backup-info').textContent = 'To nie wygląda na kopię postępu z tej apki.'; }
   });
@@ -463,7 +484,8 @@
   document.addEventListener('keydown', e => {
     if (!Q || $('quiz').hidden) return;
     const onButton = document.activeElement && document.activeElement.tagName === 'BUTTON';
-    if (!Q.answered && /^[1-4]$/.test(e.key)) { const o = Q.opts[Number(e.key) - 1]; if (o) answer(o.i); }
+    const onOther = onButton && !document.activeElement.classList.contains('opt');
+    if (!Q.answered && !onOther && /^[1-4]$/.test(e.key)) { const o = Q.opts[Number(e.key) - 1]; if (o) answer(o.i); }
     else if (Q.answered && !onButton && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); nextCard(); }
   });
 
@@ -478,20 +500,25 @@
 
   /* ---------- service worker + updates ---------- */
   let swReg = null, pendingReload = false;
-  function applyPendingUpdate() { if (pendingReload && !Q) { pendingReload = false; location.reload(); } }
+  // Reload into a new version only on Home, outside a quiz, with everything saved.
+  function applyPendingUpdate() {
+    if (pendingReload && !Q && !unsaved && $('home') && !$('home').hidden) { pendingReload = false; location.reload(); }
+  }
   if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
-    const hadController = !!navigator.serviceWorker.controller;
+    let controlled = !!navigator.serviceWorker.controller;
     navigator.serviceWorker.addEventListener('controllerchange', () => {
-      if (!hadController) return; // first install, nothing to refresh
+      if (!controlled) { controlled = true; return; } // first install: this page already runs the current files
       pendingReload = true;
-      if (!$('home').hidden) applyPendingUpdate(); // mid-quiz: wait until back on Home
+      applyPendingUpdate();
     });
+    const offlineFail = () => { $('offline-status').textContent = 'Tryb offline się nie zainstalował. Otwórz apkę ponownie z internetem.'; };
     window.addEventListener('load', () => {
+      const timer = setTimeout(offlineFail, 20000); // serviceWorker.ready never rejects
       navigator.serviceWorker.register('sw.js').then(reg => {
         swReg = reg;
         return navigator.serviceWorker.ready;
-      }).then(() => { $('offline-status').textContent = 'Działa offline.'; })
-        .catch(() => { $('offline-status').textContent = 'Tryb offline się nie zainstalował. Otwórz apkę ponownie z internetem.'; });
+      }).then(() => { clearTimeout(timer); $('offline-status').textContent = 'Działa offline.'; })
+        .catch(() => { clearTimeout(timer); offlineFail(); });
     });
   } else {
     $('offline-status').textContent = 'Tryb offline działa tylko z adresu https.';
