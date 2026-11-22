@@ -1,0 +1,147 @@
+<!doctype html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Português 1000</title>
+<meta name="description" content="Nauka 1000 najczęstszych słów portugalskich (pt-PT)">
+<meta name="theme-color" content="#EEF2FF" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0F1029" media="(prefers-color-scheme: dark)">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Português">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icons/icon-180.png">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <symbol id="i-speaker" viewBox="0 0 24 24"><path d="M19.114 5.636a9 9 0 0 1 0 12.728M16.463 8.288a5.25 5.25 0 0 1 0 7.424M6.75 8.25l4.72-4.72a.75.75 0 0 1 1.28.53v15.88a.75.75 0 0 1-1.28.53l-4.72-4.72H4.51c-.88 0-1.704-.507-1.938-1.354A9.009 9.009 0 0 1 2.25 12c0-.83.112-1.633.322-2.396C2.806 8.756 3.63 8.25 4.51 8.25H6.75Z"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24"><path d="m4.5 12.75 6 6 9-13.5"/></symbol>
+    <symbol id="i-x" viewBox="0 0 24 24"><path d="M6 18 18 6M6 6l12 12"/></symbol>
+    <symbol id="i-fire" viewBox="0 0 24 24"><path d="M15.362 5.214A8.252 8.252 0 0 1 12 21 8.25 8.25 0 0 1 6.038 7.047 8.287 8.287 0 0 0 9 9.601a8.983 8.983 0 0 1 3.361-6.867 8.21 8.21 0 0 0 3 2.48Z"/><path d="M12 18a3.75 3.75 0 0 0 .495-7.468 5.99 5.99 0 0 0-1.925 3.547 5.975 5.975 0 0 1-2.133-1.001A3.75 3.75 0 0 0 12 18Z"/></symbol>
+    <symbol id="i-play" viewBox="0 0 24 24"><path d="M5.25 5.653c0-.856.917-1.398 1.667-.986l11.54 6.347a1.125 1.125 0 0 1 0 1.972l-11.54 6.347a1.125 1.125 0 0 1-1.667-.986V5.653Z"/></symbol>
+    <symbol id="i-swap" viewBox="0 0 24 24"><path d="M7.5 21 3 16.5m0 0L7.5 12M3 16.5h13.5m0-13.5L21 7.5m0 0L16.5 12M21 7.5H7.5"/></symbol>
+    <symbol id="i-settings" viewBox="0 0 24 24"><path d="M10.5 6h9.75M10.5 6a1.5 1.5 0 1 1-3 0m3 0a1.5 1.5 0 1 0-3 0M3.75 6H7.5m3 12h9.75m-9.75 0a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m-3.75 0H7.5m9-6h3.75m-3.75 0a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m-9.75 0h9.75"/></symbol>
+    <symbol id="i-arrow" viewBox="0 0 24 24"><path d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3"/></symbol>
+  </defs>
+</svg>
+
+<main id="app">
+  <!-- HOME -->
+  <section id="home" class="screen" aria-labelledby="h-title">
+    <header class="topbar">
+      <div>
+        <p class="eyebrow">Português europeu</p>
+        <h1 id="h-title">1000 słów</h1>
+      </div>
+      <button class="icon-btn" id="btn-settings" aria-label="Ustawienia"><svg class="ic"><use href="#i-settings"/></svg></button>
+    </header>
+
+    <div class="card progress-card">
+      <p class="big-num"><span id="mastered">0</span><span class="of"> z <span id="total">1000</span></span></p>
+      <p class="label">słów opanowanych</p>
+      <div class="bar" role="progressbar" aria-labelledby="mastered" aria-valuemin="0" id="mbar"><span id="mbar-fill"></span></div>
+      <dl class="mini-stats">
+        <div><dt>W nauce</dt><dd id="learning">0</dd></div>
+        <div><dt>Powtórki</dt><dd id="due">0</dd></div>
+        <div><dt>Nowe</dt><dd id="unseen">0</dd></div>
+      </dl>
+    </div>
+
+    <div class="card streak-card">
+      <svg class="ic ic-fire" aria-hidden="true"><use href="#i-fire"/></svg>
+      <div>
+        <p class="streak-num"><span id="streak">0</span> <span id="streak-unit">dni</span> z rzędu</p>
+        <p class="label" id="today-line">Dziś jeszcze nie ćwiczyłeś</p>
+      </div>
+    </div>
+
+    <div class="seg" role="radiogroup" aria-label="Kierunek quizu">
+      <button role="radio" class="seg-btn" data-dir="pt" aria-checked="true">PT → EN</button>
+      <button role="radio" class="seg-btn" data-dir="en" aria-checked="false">EN → PT</button>
+    </div>
+
+    <button class="btn-primary" id="btn-start">
+      <svg class="ic" aria-hidden="true"><use href="#i-play"/></svg>
+      <span id="start-label">Zacznij naukę</span>
+    </button>
+    <p class="hint" id="start-sub"></p>
+  </section>
+
+  <!-- QUIZ -->
+  <section id="quiz" class="screen" hidden aria-label="Quiz">
+    <header class="quizbar">
+      <button class="icon-btn" id="btn-quit" aria-label="Zakończ sesję"><svg class="ic"><use href="#i-x"/></svg></button>
+      <div class="bar bar-thin" aria-hidden="true"><span id="qbar-fill"></span></div>
+      <span class="counter" id="qcount">0/0</span>
+    </header>
+
+    <div class="card word-card">
+      <p class="eyebrow" id="q-label">Co to znaczy?</p>
+      <div class="word-row">
+        <p class="word" id="q-word" lang="pt-PT"></p>
+        <button class="icon-btn speak" id="btn-speak" aria-label="Wymowa"><svg class="ic"><use href="#i-speaker"/></svg></button>
+      </div>
+      <p class="tag" id="q-tag"></p>
+    </div>
+
+    <div class="options" id="options" role="group" aria-label="Odpowiedzi"></div>
+
+    <div class="feedback" id="feedback" aria-live="polite"></div>
+    <button class="btn-primary btn-next" id="btn-next" hidden>
+      <span>Dalej</span><svg class="ic" aria-hidden="true"><use href="#i-arrow"/></svg>
+    </button>
+  </section>
+
+  <!-- SUMMARY -->
+  <section id="summary" class="screen" hidden aria-labelledby="s-title">
+    <div class="card summary-card">
+      <svg class="ic ic-big" aria-hidden="true"><use href="#i-check"/></svg>
+      <h2 id="s-title">Sesja skończona</h2>
+      <p class="big-num" id="s-score"></p>
+      <p class="label" id="s-detail"></p>
+    </div>
+    <button class="btn-primary" id="btn-again"><svg class="ic" aria-hidden="true"><use href="#i-play"/></svg><span>Jeszcze jedna sesja</span></button>
+    <button class="btn-ghost" id="btn-home">Wróć do startu</button>
+  </section>
+
+  <!-- SETTINGS -->
+  <section id="settings" class="screen" hidden aria-labelledby="set-title">
+    <header class="topbar">
+      <h2 id="set-title">Ustawienia</h2>
+      <button class="icon-btn" id="btn-close-settings" aria-label="Zamknij ustawienia"><svg class="ic"><use href="#i-x"/></svg></button>
+    </header>
+    <div class="card">
+      <p class="set-label" id="lbl-batch">Nowe słowa na sesję</p>
+      <div class="seg" role="radiogroup" aria-labelledby="lbl-batch" id="seg-batch">
+        <button role="radio" class="seg-btn" data-n="5">5</button>
+        <button role="radio" class="seg-btn" data-n="10">10</button>
+        <button role="radio" class="seg-btn" data-n="20">20</button>
+      </div>
+    </div>
+    <div class="card">
+      <label class="switch-row">
+        <span>Czytaj słowo automatycznie</span>
+        <input type="checkbox" id="chk-auto" role="switch">
+      </label>
+      <p class="label" id="voice-info"></p>
+    </div>
+    <div class="card">
+      <p class="set-label">Jak to działa</p>
+      <p class="body">Każde słowo trafia do jednego z 5 pudełek. Dobra odpowiedź przesuwa je wyżej i odsuwa powtórkę (2, 4, 8, 21 dni). Błąd cofa je do pudełka 1: słowo wraca jeszcze w tej sesji i znowu jutro. Słowo jest opanowane, gdy dojdzie do pudełka 5.</p>
+    </div>
+    <div class="card">
+      <button class="btn-danger" id="btn-reset">Wyzeruj postęp</button>
+      <p class="label" id="reset-info">Kasuje postęp i serię na tym telefonie.</p>
+    </div>
+  </section>
+</main>
+
+<script src="words.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
