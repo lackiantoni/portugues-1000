@@ -1,6 +1,6 @@
 // Offline cache for Português 1000. VERSION is rewritten by build_app_data.py from file contents.
 const PREFIX = 'pt1000|' + new URL(self.registration.scope).pathname + '|';
-const VERSION = '6f14a1d153';
+const VERSION = '285cf0438f';
 const CACHE = PREFIX + VERSION;
 const FILES = ['./', 'index.html', 'styles.css', 'app.js', 'words.js', 'manifest.webmanifest', 'icons/icon-180.png', 'icons/icon-192.png', 'icons/icon-512.png'];
 self.addEventListener('install', e => {
