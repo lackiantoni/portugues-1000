@@ -1,6 +1,6 @@
 // Offline cache for Português 1000. VERSION is rewritten by build_app_data.py from file contents.
 const PREFIX = 'pt1000|' + new URL(self.registration.scope).pathname + '|';
-const VERSION = 'a3ec1121d5';
+const VERSION = '6f14a1d153';
 const CACHE = PREFIX + VERSION;
 const FILES = ['./', 'index.html', 'styles.css', 'app.js', 'words.js', 'manifest.webmanifest', 'icons/icon-180.png', 'icons/icon-192.png', 'icons/icon-512.png'];
 self.addEventListener('install', e => {
@@ -9,7 +9,7 @@ self.addEventListener('install', e => {
 });
 self.addEventListener('activate', e => {
   e.waitUntil(caches.keys()
-    .then(keys => Promise.all(keys.filter(k => k.startsWith(PREFIX) && k !== CACHE).map(k => caches.delete(k))))
+    .then(keys => Promise.all(keys.filter(k => k !== CACHE && (k.startsWith(PREFIX) || k.startsWith('pt1000-'))).map(k => caches.delete(k)))) // pt1000- = caches of the first sample builds
     .then(() => self.clients.claim()));
 });
 self.addEventListener('fetch', e => {

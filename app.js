@@ -1,7 +1,7 @@
 /* Português 1000: PT→EN quiz with Leitner spaced repetition. All state lives in localStorage on the device. */
 (() => {
   'use strict';
-  const WORDS = Array.isArray(window.WORDS) ? window.WORDS : [];
+  const WORDS = (Array.isArray(window.WORDS) ? window.WORDS : []).map(w => (w.g != null && !Array.isArray(w.g) ? Object.assign({}, w, { g: [w.g] }) : w));
   const CATS = window.CATS || {};
   const BY_ID = new Map(WORDS.map(w => [w.i, w]));
   const KEY = 'pt1000.v1';
@@ -45,7 +45,8 @@
     s.streak = s.streak || def.streak;
     s.today = s.today || def.today;
     for (const [id, c] of Object.entries(s.cards)) {
-      if (!c || typeof c !== 'object' || !(c.b >= 1 && c.b <= MASTER_BOX)) { if (strict) return null; delete s.cards[id]; continue; }
+      const badDay = c && c.d != null && !(typeof c.d === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(c.d));
+      if (!c || typeof c !== 'object' || !(c.b >= 1 && c.b <= MASTER_BOX) || badDay) { if (strict) return null; delete s.cards[id]; continue; }
       // v1 stored timestamps; v2 stores day keys
       if (!c.d) c.d = typeof c.due === 'number' ? keyOf(new Date(c.due + 12 * 3600000)) : dayKey(); // +12h absorbs DST drift
       delete c.due;
@@ -141,7 +142,7 @@
   }
 
   /* ---------- speech ---------- */
-  let voice = null;
+  let voice = null, speakToken = 0;
   function pickVoice() {
     if (!hasSpeech) return null;
     const vs = speechSynthesis.getVoices();
@@ -167,7 +168,8 @@
       if (voice) u.voice = voice;
       u.rate = 0.9;
       $('speak-error').hidden = true;
-      u.onerror = ev => { if (ev.error !== 'interrupted' && ev.error !== 'canceled') $('speak-error').hidden = false; };
+      const token = ++speakToken;
+      u.onerror = ev => { if (token === speakToken && ev.error !== 'interrupted' && ev.error !== 'canceled') $('speak-error').hidden = false; };
       speechSynthesis.speak(u);
     } catch (e) { /* speech unavailable */ }
   }
@@ -314,6 +316,8 @@
     const item = Q.queue[0];
     const w = BY_ID.get(item.id);
     const dir = S.settings.dir;
+    Q.dir = dir; // fixed for this question even if settings change meanwhile
+    $('speak-error').hidden = true;
     Q.current = item;
     Q.answered = false;
     Q.opts = shuffle([w, ...distractors(w, dir)]);
@@ -359,7 +363,7 @@
     const item = Q.current;
     const w = BY_ID.get(item.id);
     const correct = chosenId === w.i;
-    const dir = S.settings.dir;
+    const dir = Q.dir;
     const today = dayKey();
 
     for (const b of document.querySelectorAll('#options .opt')) {
@@ -442,10 +446,10 @@
   $('btn-import').addEventListener('click', () => {
     try {
       const s = normalize(JSON.parse($('backup-text').value), true);
-      if (!s || !Object.keys(s.cards).length) throw new Error('bad');
+      if (!s) throw new Error('bad');
       const prev = S;
       S = s;
-      if (!save()) { S = prev; throw new Error('save'); }
+      if (!save()) { S = prev; $('save-error').hidden = true; unsaved = false; $('backup-info').textContent = 'Kopia jest poprawna, ale telefon nie pozwolił jej zapisać. Spróbuj ponownie.'; return; }
       renderSettings();
       $('backup-info').textContent = `Wczytano postęp: ${Object.keys(S.cards).length} słów.`;
     } catch (e) { $('backup-info').textContent = 'To nie wygląda na kopię postępu z tej apki.'; }
