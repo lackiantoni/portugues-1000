@@ -41,10 +41,21 @@
       <button class="icon-btn" id="btn-settings" aria-label="Ustawienia"><svg class="ic"><use href="#i-settings"/></svg></button>
     </header>
 
+    <div class="alert" id="save-error" hidden role="alert">
+      <p>Nie udało się zapisać postępu na telefonie.</p>
+      <button class="btn-ghost btn-small" id="btn-retry-save">Spróbuj zapisać ponownie</button>
+    </div>
+    <div class="alert" id="load-error" hidden role="alert">
+      <p>Nie wczytała się lista słów. Otwórz apkę z internetem, żeby ją pobrać.</p>
+    </div>
+    <div class="alert alert-info" id="install-hint" hidden>
+      <p>Dodaj apkę do ekranu głównego (Udostępnij, potem „Do ekranu początkowego”) i ucz się z ikony. Postęp w Safari i w apce na ekranie głównym jest zapisany osobno.</p>
+    </div>
+
     <div class="card progress-card">
       <p class="big-num"><span id="mastered">0</span><span class="of"> z <span id="total">1000</span></span></p>
       <p class="label">słów opanowanych</p>
-      <div class="bar" role="progressbar" aria-labelledby="mastered" aria-valuemin="0" id="mbar"><span id="mbar-fill"></span></div>
+      <div class="bar" role="progressbar" aria-label="Słowa opanowane" aria-valuemin="0" id="mbar"><span id="mbar-fill"></span></div>
       <dl class="mini-stats">
         <div><dt>W nauce</dt><dd id="learning">0</dd></div>
         <div><dt>Powtórki</dt><dd id="due">0</dd></div>
@@ -60,9 +71,9 @@
       </div>
     </div>
 
-    <div class="seg" role="radiogroup" aria-label="Kierunek quizu">
-      <button role="radio" class="seg-btn" data-dir="pt" aria-checked="true">PT → EN</button>
-      <button role="radio" class="seg-btn" data-dir="en" aria-checked="false">EN → PT</button>
+    <div class="seg" role="radiogroup" aria-label="Kierunek quizu" id="seg-dir">
+      <button role="radio" class="seg-btn" data-v="pt" aria-checked="true">PT → EN</button>
+      <button role="radio" class="seg-btn" data-v="en" aria-checked="false">EN → PT</button>
     </div>
 
     <button class="btn-primary" id="btn-start">
@@ -118,9 +129,9 @@
     <div class="card">
       <p class="set-label" id="lbl-batch">Nowe słowa na sesję</p>
       <div class="seg" role="radiogroup" aria-labelledby="lbl-batch" id="seg-batch">
-        <button role="radio" class="seg-btn" data-n="5">5</button>
-        <button role="radio" class="seg-btn" data-n="10">10</button>
-        <button role="radio" class="seg-btn" data-n="20">20</button>
+        <button role="radio" class="seg-btn" data-v="5">5</button>
+        <button role="radio" class="seg-btn" data-v="10">10</button>
+        <button role="radio" class="seg-btn" data-v="20">20</button>
       </div>
     </div>
     <div class="card">
@@ -133,6 +144,20 @@
     <div class="card">
       <p class="set-label">Jak to działa</p>
       <p class="body">Każde słowo trafia do jednego z 5 pudełek. Dobra odpowiedź przesuwa je wyżej i odsuwa powtórkę (2, 4, 8, 21 dni). Błąd cofa je do pudełka 1: słowo wraca jeszcze w tej sesji i znowu jutro. Słowo jest opanowane, gdy dojdzie do pudełka 5.</p>
+    </div>
+    <div class="card">
+      <p class="set-label">Kopia postępu</p>
+      <p class="label">Przeniesiesz nią postęp z Safari do apki albo na nowy telefon.</p>
+      <textarea id="backup-text" rows="3" aria-label="Kopia postępu (tekst)" spellcheck="false"></textarea>
+      <div class="row-2">
+        <button class="btn-ghost btn-small" id="btn-export">Kopiuj postęp</button>
+        <button class="btn-ghost btn-small" id="btn-import">Wczytaj z pola</button>
+      </div>
+      <p class="label" id="backup-info" aria-live="polite"></p>
+    </div>
+    <div class="card">
+      <p class="set-label">Offline</p>
+      <p class="label" id="offline-status">Sprawdzam…</p>
     </div>
     <div class="card">
       <button class="btn-danger" id="btn-reset">Wyzeruj postęp</button>
