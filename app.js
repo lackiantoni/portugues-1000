@@ -310,26 +310,54 @@
     $('qbar-fill').style.width = (Q.total ? (done / Q.total) * 100 : 0) + '%';
   }
 
+  // Sentence cards: function words, verbs, adverbs and phrases always in a sentence;
+  // nouns, adjectives and numbers alternate (first sight = word, then sentence, word, ...).
+  const ALTERNATE = new Set(['n', 'adj', 'num']);
+  function sentenceMode(w, dir) {
+    if (!w.t || dir !== 'pt') return false;
+    if (!ALTERNATE.has(w.s)) return true;
+    const c = S.cards[w.i];
+    return !!c && (c.r + c.w) % 2 === 1;
+  }
+
+  function renderSentence(el, t) {
+    el.textContent = '';
+    const at = t.p.indexOf(t.h);
+    if (at < 0) { el.textContent = t.p; return; }
+    const mark = document.createElement('mark');
+    mark.textContent = t.h;
+    el.append(t.p.slice(0, at), mark, t.p.slice(at + t.h.length));
+  }
+
   function nextCard() {
     if (!Q) return;
     if (!Q.queue.length) return finishSession();
     const item = Q.queue[0];
     const w = BY_ID.get(item.id);
     const dir = S.settings.dir;
+    const sent = sentenceMode(w, dir);
     Q.dir = dir; // fixed for this question even if settings change meanwhile
+    Q.sent = sent;
     $('speak-error').hidden = true;
     Q.current = item;
     Q.answered = false;
-    Q.opts = shuffle([w, ...distractors(w, dir)]);
+    if (sent) {
+      Q.opts = shuffle([{ key: 'ok', label: w.t.e }, ...w.t.x.map((x, k) => ({ key: 'x' + k, label: x }))]);
+    } else {
+      Q.opts = shuffle([w, ...distractors(w, dir)]).map(o => ({ key: o.i === w.i ? 'ok' : 'w' + o.i, label: dir === 'pt' ? o.e : o.p }));
+    }
 
-    const prompt = dir === 'pt' ? 'Co to znaczy?' : 'Jak to jest po portugalsku?';
+    const prompt = sent ? 'Co znaczy to zdanie?' : (dir === 'pt' ? 'Co to znaczy?' : 'Jak to jest po portugalsku?');
     $('q-label').textContent = item.isNew && !Q.missed.has(item.id) ? `Nowe słowo · ${prompt}` : prompt;
     const wordEl = $('q-word');
-    wordEl.textContent = dir === 'pt' ? w.p : w.e;
+    if (sent) renderSentence(wordEl, w.t);
+    else wordEl.textContent = dir === 'pt' ? w.p : w.e;
     wordEl.lang = dir === 'pt' ? 'pt-PT' : 'en';
-    wordEl.classList.toggle('long', wordEl.textContent.length > 16);
+    wordEl.classList.toggle('sentence', sent);
+    wordEl.classList.toggle('long', !sent && wordEl.textContent.length > 16);
     $('q-tag').textContent = `${POS_PL[w.s] || ''} · ${CATS[w.c] || ''}`;
     $('btn-speak').hidden = dir !== 'pt';
+    $('q-context').hidden = true;
 
     const box = $('options');
     box.textContent = '';
@@ -337,13 +365,13 @@
       const b = document.createElement('button');
       b.className = 'opt';
       b.type = 'button';
-      b.dataset.id = o.i;
+      b.dataset.key = o.key;
       b.lang = dir === 'pt' ? 'en' : 'pt-PT';
       const label = document.createElement('span');
-      label.textContent = dir === 'pt' ? o.e : o.p;
+      label.textContent = o.label;
       b.append(label);
       b.insertAdjacentHTML('beforeend', '<svg class="ic" aria-hidden="true"><use href="#i-check"/></svg>');
-      b.addEventListener('click', () => answer(o.i));
+      b.addEventListener('click', () => answer(o.key));
       box.append(b);
     }
     const fb = $('feedback');
@@ -352,26 +380,26 @@
     $('btn-next').hidden = true;
     renderProgress();
 
-    if (dir === 'pt' && S.settings.auto) speak(w.p);
+    if (dir === 'pt' && S.settings.auto) speak(sent ? w.t.p : w.p);
     wordEl.tabIndex = -1;
     wordEl.focus({ preventScroll: true });
   }
 
-  function answer(chosenId) {
+  function answer(chosenKey) {
     if (!Q || Q.answered) return;
     Q.answered = true;
     const item = Q.current;
     const w = BY_ID.get(item.id);
-    const correct = chosenId === w.i;
+    const correct = chosenKey === 'ok';
     const dir = Q.dir;
     const today = dayKey();
 
     for (const b of document.querySelectorAll('#options .opt')) {
-      const id = Number(b.dataset.id);
+      const k = b.dataset.key;
       b.disabled = true;
       const icon = b.querySelector('use');
-      if (id === w.i) { b.classList.add('ok'); icon.setAttribute('href', '#i-check'); }
-      else if (id === chosenId) { b.classList.add('bad'); icon.setAttribute('href', '#i-x'); }
+      if (k === 'ok') { b.classList.add('ok'); icon.setAttribute('href', '#i-check'); }
+      else if (k === chosenKey) { b.classList.add('bad'); icon.setAttribute('href', '#i-x'); }
       else b.classList.add('dim');
     }
 
@@ -408,12 +436,32 @@
       fb.className = 'feedback bad';
       const ans = document.createElement('span');
       ans.lang = dir === 'pt' ? 'en' : 'pt-PT';
-      ans.textContent = dir === 'pt' ? w.e : w.p;
+      ans.textContent = Q.sent ? w.t.e : (dir === 'pt' ? w.e : w.p);
       fb.append('Źle. Poprawnie: ', ans);
+    }
+    // Context line: in a sentence card show what the highlighted word means; in a word card show the example sentence.
+    const ctx = $('q-context');
+    ctx.textContent = '';
+    ctx.className = Q.sent ? 'context' : 'context stack';
+    if (Q.sent) {
+      const pt = document.createElement('strong'); pt.lang = 'pt-PT'; pt.textContent = w.p;
+      const en = document.createElement('span'); en.lang = 'en'; en.textContent = w.e;
+      ctx.append(pt, ' = ', en);
+      if (w.t.h.toLowerCase() !== w.p.toLowerCase() && !w.p.toLowerCase().split(' / ').includes(w.t.h.toLowerCase())) {
+        const form = document.createElement('span'); form.className = 'form'; form.lang = 'pt-PT';
+        form.textContent = ` (w zdaniu: ${w.t.h})`;
+        ctx.append(form);
+      }
+      ctx.hidden = false;
+    } else if (w.t) {
+      const pt = document.createElement('span'); pt.lang = 'pt-PT'; renderSentence(pt, w.t);
+      const en = document.createElement('span'); en.className = 'ctx-en'; en.lang = 'en'; en.textContent = w.t.e;
+      ctx.append(pt, en);
+      ctx.hidden = false;
     }
     if (dir === 'en') {
       $('btn-speak').hidden = false;
-      if (S.settings.auto) speak(w.p);
+      if (S.settings.auto) speak(w.t ? w.t.p : w.p);
     }
     const next = $('btn-next');
     next.hidden = false;
@@ -461,7 +509,11 @@
   $('btn-home').addEventListener('click', goHome);
   $('btn-quit').addEventListener('click', goHome);
   $('btn-next').addEventListener('click', nextCard);
-  $('btn-speak').addEventListener('click', () => { if (Q && Q.current) speak(BY_ID.get(Q.current.id).p); });
+  $('btn-speak').addEventListener('click', () => {
+    if (!Q || !Q.current) return;
+    const w = BY_ID.get(Q.current.id);
+    speak(w.t && (Q.sent || Q.answered) ? w.t.p : w.p);
+  });
   $('btn-settings').addEventListener('click', () => { renderSettings(); show('settings'); });
   $('btn-close-settings').addEventListener('click', goHome);
   $('btn-retry-save').addEventListener('click', save);
@@ -489,7 +541,7 @@
     if (!Q || $('quiz').hidden) return;
     const onButton = document.activeElement && document.activeElement.tagName === 'BUTTON';
     const onOther = onButton && !document.activeElement.classList.contains('opt');
-    if (!Q.answered && !onOther && /^[1-4]$/.test(e.key)) { const o = Q.opts[Number(e.key) - 1]; if (o) answer(o.i); }
+    if (!Q.answered && !onOther && /^[1-4]$/.test(e.key)) { const o = Q.opts[Number(e.key) - 1]; if (o) answer(o.key); }
     else if (Q.answered && !onButton && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); nextCard(); }
   });
 
